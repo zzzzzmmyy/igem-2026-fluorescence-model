@@ -1,0 +1,8 @@
+{
+  "name": "SheetJS Community Edition",
+  "version": "0.18.5",
+  "license": "Apache-2.0",
+  "source": "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99",
+  "purpose": "Vendored for same-origin/offline spreadsheet import and export; no runtime CDN requests."
+}

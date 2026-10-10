@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fluorescence Unmixing Workbench</title>
+  <link rel="stylesheet" href="workbench.css">
+</head>
+<body>
+<noscript>This workbench requires JavaScript. Please enable it to analyze fluorescence readings.</noscript>
+<div class="page">
+
+  <header class="top">
+    <h1>Fluorescence Unmixing Workbench</h1>
+    <p>Mark blank and test wells on a 96-well plate, upload the GFP/mCherry fluorescence readings, and use the validated two-channel linear regression model (M3) to estimate the fraction of GFP-positive cells in each well.</p>
+  </header>
+
+  <!-- STEP 1: plate design -->
+  <section class="card" id="card-plate">
+    <h2><span class="step-num">1</span>Design the plate layout</h2>
+    <p class="hint">Drag across the plate to select multiple wells (marked as test wells by default); click a single well to cycle through Unused → Test → Blank. An example layout is already loaded; clear it to create your own.</p>
+
+    <div class="toolbar">
+      <button class="btn" id="btn-example">Load example layout</button>
+      <button class="btn" id="btn-clear">Clear all wells</button>
+      <button class="btn ghost" id="btn-back-to-design" hidden>Edit plate layout</button>
+    </div>
+
+    <div class="legend">
+      <span class="swatch"><span class="dot" style="background:var(--well-empty)"></span>Unused</span>
+      <span class="swatch"><span class="dot" style="background:var(--well-test)"></span>Test well</span>
+      <span class="swatch"><span class="dot" style="background:var(--well-blank)"></span>Blank well</span>
+      <span id="legend-results-note" hidden>· In results mode, colors indicate the GFP cell fraction (see the scale below)</span>
+    </div>
+
+    <div class="plate-wrap">
+      <div class="plate-grid" id="plate-grid" role="group" aria-label="96-well plate"></div>
+    </div>
+
+    <div id="scale-legend" hidden>
+      <div class="scale-bar"></div>
+      <div class="scale-labels"><span>0.0 (all mCherry)</span><span>0.5</span><span>1.0 (all GFP)</span></div>
+    </div>
+
+    <div class="counts">
+      <span>Test wells: <b id="count-test">0</b></span>
+      <span>Blank wells: <b id="count-blank">0</b></span>
+      <span>Unused: <b id="count-empty">96</b></span>
+    </div>
+
+    <div class="detail" id="detail-panel">Hover over or click a well to view its role and data.</div>
+  </section>
+
+  <!-- STEP 2: data upload -->
+  <section class="card" id="card-upload">
+    <h2><span class="step-num">2</span>Import measurement data</h2>
+    <p class="hint">Download a template matching your current plate layout, enter the Tecan readings, and upload it; you can also upload any spreadsheet that follows the format below.</p>
+
+    <div class="toolbar">
+      <button class="btn" id="btn-template">Download layout template (.xlsx)</button>
+    </div>
+
+    <div class="format-spec">
+      The first row must contain the following three column headers (case-insensitive; extra columns are ignored). Well roles always follow the plate layout in Step 1; role information in the spreadsheet is not used:
+      <table>
+        <tr><th>Column name</th><th>Description</th><th>Example</th></tr>
+        <tr><td><code>Well</code></td><td>Well ID</td><td>A1, H12</td></tr>
+        <tr><td><code>GFP_raw</code></td><td>Raw GFP channel reading</td><td>1250000</td></tr>
+        <tr><td><code>mCherry_raw</code></td><td>Raw mCherry channel reading</td><td>15000</td></tr>
+      </table>
+    </div>
+
+    <div class="upload-row">
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
+    </div>
+
+    <div id="upload-status"></div>
+  </section>
+
+  <!-- STEP 3: analyze -->
+  <section class="card" id="card-analyze">
+    <h2><span class="step-num">3</span>Run analysis</h2>
+    <p class="hint">Prediction requires at least one blank well with data (to calculate the background baseline) and one test well with data.</p>
+
+    <div class="toolbar">
+      <button class="btn primary" id="btn-analyze" disabled>Start analysis</button>
+      <button class="btn" id="btn-export" hidden>Download results (.csv)</button>
+    </div>
+
+    <div id="analyze-status"></div>
+
+    <div id="results-summary" hidden class="counts">
+      <span>Test wells analyzed: <b id="sum-n">0</b></span>
+      <span>Mean GFP fraction: <b id="sum-mean">-</b></span>
+      <span>Outside calibration range: <b id="sum-oor">0</b></span>
+    </div>
+
+    <div class="table-wrap" id="results-table-wrap" hidden>
+      <table class="results" id="results-table">
+        <thead>
+          <tr><th>Well</th><th>GFP_raw</th><th>mCherry_raw</th><th>GFPc</th><th>mCherryc</th><th>Fraction</th><th>95% CI</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- MODEL INFO -->
+  <section class="card">
+    <h2>Model information</h2>
+    <div class="formula">fraction&nbsp;=&nbsp;2.636346×10⁻⁷ · GFPc&nbsp;&minus;&nbsp;5.504128×10⁻⁶ · mCherryc&nbsp;+&nbsp;0.193273</div>
+    <div class="model-grid">
+      <div class="stat"><div class="k">Training CV R²</div><div class="v">0.9956</div></div>
+      <div class="stat"><div class="k">Training CV RMSE</div><div class="v">0.0201</div></div>
+      <div class="stat"><div class="k">External test R²</div><div class="v">0.9098</div></div>
+      <div class="stat"><div class="k">External test RMSE</div><div class="v">0.0582</div></div>
+      <div class="stat"><div class="k">GFPc calibration range</div><div class="v" style="font-size:12px">7.5e3 ~ 3.10e6</div></div>
+      <div class="stat"><div class="k">mCherryc calibration range</div><div class="v" style="font-size:12px">2.1e2 ~ 4.03e4</div></div>
+    </div>
+    <p class="hint" style="margin:0">GFPc / mCherryc are background-corrected signals obtained by subtracting the mean blank-well readings from the raw readings. The confidence interval is ±1.96× the standard deviation of cross-validation residuals. Predictions outside the calibration ranges above are extrapolations with no guarantee of reliability and are marked with "!" in the results.</p>
+  </section>
+
+  <footer class="note">Data is processed entirely on this page and is not uploaded to any server.</footer>
+  <footer class="note">
+    <p>Content is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+    <p><a id="wiki-source" hidden>Wiki source code on iGEM GitLab</a></p>
+    <p>Spreadsheet import/export: SheetJS Community Edition 0.18.5, Apache License 2.0.
+      <a href="vendor/LICENSE.sheetjs.txt">Third-party license</a>.</p>
+  </footer>
+
+</div>
+<script src="config.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="workbench.js"></script>
+</body>
+</html>
